@@ -6,7 +6,7 @@ import { RUN_HISTORY_FULL } from '../data/mockData'
 import Toast from '../components/ui/Toast'
 
 const PAGE_SIZE = 20
-const TYPE_CLASSES = { 'Eval': 'badge-indigo', 'Quick Eval': 'badge-cyan', 'CMS Live': 'badge-gray' }
+const TYPE_CLASSES = { 'Eval': 'badge-indigo', 'Eval': 'badge-cyan', 'CMS Live': 'badge-gray' }
 const STATUS_CLASS  = { success: 'badge-success', error: 'badge-danger' }
 
 export default function RunHistory() {
@@ -38,7 +38,7 @@ export default function RunHistory() {
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
   const paginated = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const evalRuns = filtered.filter(r => r.type === 'Eval' || r.type === 'Quick Eval')
+  const evalRuns = filtered.filter(r => r.type === 'Eval' || r.type === 'Eval')
   const avgF1 = evalRuns.filter(r => r.avgF1).reduce((s, r) => s + r.avgF1, 0) / (evalRuns.filter(r => r.avgF1).length || 1)
 
   const MOCK_PROBLEMS = [
@@ -77,7 +77,7 @@ export default function RunHistory() {
           <input className="input" placeholder="Search run ID or dataset..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 30, width: 220 }} />
         </div>
         <div style={{ display: 'flex', background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 8, overflow: 'hidden' }}>
-          {['All','Eval','Quick Eval','CMS Live'].map(t => (
+          {['All','Eval','Eval','CMS Live'].map(t => (
             <button key={t} onClick={() => { setTypeFilter(t); setPage(1) }} style={{ padding: '6px 12px', fontSize: 12, border: 'none', cursor: 'pointer', background: typeFilter === t ? '#6366f1' : 'transparent', color: typeFilter === t ? '#fff' : '#9ca3af', transition: 'all 0.15s', whiteSpace: 'nowrap' }}>{t}</button>
           ))}
         </div>

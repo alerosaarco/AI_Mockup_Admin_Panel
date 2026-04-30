@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ChevronDown, ChevronUp, Play } from 'lucide-react'
 import { useAssistant } from '../context/AssistantContext'
-import { EVAL_TREND_DATA, EVAL_PROBLEM_TABLE, EVAL_RUN_HISTORY, PROBLEM_TREND_COLORS } from '../data/mockData'
+import { getEvalTrendData, getEvalProblemTable, EVAL_RUN_HISTORY, getProblemTrendColors } from '../data/mockData'
 
-const RUN_TYPES = ['All', 'Eval', 'Quick Eval']
+const RUN_TYPES = ['All', 'Eval', 'CMS']
 const STATUS_CLASS = { success: 'badge-success', error: 'badge-danger' }
 
 function sortData(arr, key, dir) {
@@ -22,11 +22,15 @@ export default function EvalDashboard() {
   const [expandedRow, setExpandedRow] = useState(null)
   const [sort, setSort] = useState({ key: 'latestF1', dir: 'desc' })
 
+  const trendData = getEvalTrendData(selected?.name)
+  const trendColors = getProblemTrendColors(selected?.name)
+  const problemTable = getEvalProblemTable(selected?.name)
+
   const toggleSort = key => setSort(s => ({ key, dir: s.key === key && s.dir === 'desc' ? 'asc' : 'desc' }))
   const SortIcon = ({ k }) => sort.key === k ? (sort.dir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />) : null
 
   const filteredRuns = runType === 'All' ? EVAL_RUN_HISTORY : EVAL_RUN_HISTORY.filter(r => r.type === runType)
-  const sortedProblems = sortData(EVAL_PROBLEM_TABLE, sort.key, sort.dir)
+  const sortedProblems = sortData(problemTable, sort.key, sort.dir)
 
   return (
     <div>
@@ -68,12 +72,12 @@ export default function EvalDashboard() {
           Score Trend (Last 8 Evals)
         </h2>
         <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={EVAL_TREND_DATA} margin={{ left: -10, right: 10, top: 5, bottom: 5 }}>
+          <LineChart data={trendData} margin={{ left: -10, right: 10, top: 5, bottom: 5 }}>
             <XAxis dataKey="date" tick={{ fill: '#6b7280', fontSize: 11 }} />
             <YAxis domain={[65, 100]} tick={{ fill: '#6b7280', fontSize: 11 }} />
             <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid #1e1e2e', borderRadius: 8, fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-            {Object.entries(PROBLEM_TREND_COLORS).map(([k, c]) => (
+            {Object.entries(trendColors).map(([k, c]) => (
               <Line key={k} type="monotone" dataKey={k} stroke={c} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
             ))}
           </LineChart>

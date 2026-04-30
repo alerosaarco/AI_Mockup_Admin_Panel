@@ -75,40 +75,51 @@ export function getProblemScores(assistantName) {
   ]
 }
 
-// 8 weekly eval trend data points
-export const EVAL_TREND_DATA = [
-  { date: daysAgo(49), 'Subject-Verb Agreement': 85, 'Comma Usage': 81, 'Sentence Clarity': 79, 'Redundancy': 70, 'Passive Voice': 75 },
-  { date: daysAgo(42), 'Subject-Verb Agreement': 87, 'Comma Usage': 83, 'Sentence Clarity': 80, 'Redundancy': 72, 'Passive Voice': 74 },
-  { date: daysAgo(35), 'Subject-Verb Agreement': 88, 'Comma Usage': 84, 'Sentence Clarity': 81, 'Redundancy': 74, 'Passive Voice': 73 },
-  { date: daysAgo(28), 'Subject-Verb Agreement': 89, 'Comma Usage': 85, 'Sentence Clarity': 82, 'Redundancy': 75, 'Passive Voice': 73 },
-  { date: daysAgo(21), 'Subject-Verb Agreement': 90, 'Comma Usage': 86, 'Sentence Clarity': 83, 'Redundancy': 76, 'Passive Voice': 72 },
-  { date: daysAgo(14), 'Subject-Verb Agreement': 91, 'Comma Usage': 87, 'Sentence Clarity': 83, 'Redundancy': 78, 'Passive Voice': 72 },
-  { date: daysAgo(7),  'Subject-Verb Agreement': 91, 'Comma Usage': 87, 'Sentence Clarity': 84, 'Redundancy': 79, 'Passive Voice': 71 },
-  { date: daysAgo(0),  'Subject-Verb Agreement': 92, 'Comma Usage': 88, 'Sentence Clarity': 84, 'Redundancy': 79, 'Passive Voice': 71 },
-]
+const TREND_PALETTE = ['#6366f1', '#22d3ee', '#22c55e', '#f59e0b', '#ef4444', '#a78bfa', '#34d399']
 
-export const PROBLEM_TREND_COLORS = {
-  'Subject-Verb Agreement': '#6366f1',
-  'Comma Usage': '#22d3ee',
-  'Sentence Clarity': '#22c55e',
-  'Redundancy': '#f59e0b',
-  'Passive Voice': '#ef4444',
+// Deterministic "jitter" based on problem name + week index so values are stable
+function seed(str) {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
+  return Math.abs(h)
 }
 
-export const EVAL_PROBLEM_TABLE = [
-  { problem: 'Subject-Verb Agreement', latestF1: 92, prevF1: 91, rowsEvaluated: 38, lastRun: daysAgo(0), history: [89, 91, 92] },
-  { problem: 'Comma Usage',            latestF1: 88, prevF1: 87, rowsEvaluated: 31, lastRun: daysAgo(0), history: [85, 87, 88] },
-  { problem: 'Sentence Clarity',       latestF1: 84, prevF1: 83, rowsEvaluated: 27, lastRun: daysAgo(0), history: [81, 83, 84] },
-  { problem: 'Redundancy',             latestF1: 79, prevF1: 78, rowsEvaluated: 24, lastRun: daysAgo(0), history: [75, 78, 79] },
-  { problem: 'Passive Voice',          latestF1: 71, prevF1: 72, rowsEvaluated: 22, lastRun: daysAgo(0), history: [73, 72, 71] },
-]
+export function getEvalTrendData(assistantName) {
+  const problems = getProblemScores(assistantName)
+  return Array.from({ length: 8 }, (_, week) => {
+    const row = { date: daysAgo(49 - week * 7) }
+    problems.forEach(({ problem, score, prev }) => {
+      const base = prev + ((score - prev) * week) / 7
+      const jitter = ((seed(problem + week) % 5) - 2) * 0.4
+      row[problem] = Math.round((base + jitter) * 10) / 10
+    })
+    return row
+  })
+}
+
+export function getProblemTrendColors(assistantName) {
+  const problems = getProblemScores(assistantName)
+  return Object.fromEntries(problems.map(({ problem }, i) => [problem, TREND_PALETTE[i % TREND_PALETTE.length]]))
+}
+
+export function getEvalProblemTable(assistantName) {
+  const problems = getProblemScores(assistantName)
+  return problems.map(({ problem, score, prev }, i) => ({
+    problem,
+    latestF1: score,
+    prevF1: prev,
+    rowsEvaluated: 20 + (seed(problem) % 20),
+    lastRun: daysAgo(0),
+    history: [prev - 2, prev, score],
+  }))
+}
 
 export const EVAL_RUN_HISTORY = [
   { id: 'RUN-2841', date: daysAgo(0),  type: 'Eval',       dataset: 'v3', rows: 142, avgF1: 83.8, status: 'success' },
-  { id: 'RUN-2840', date: daysAgo(2),  type: 'Quick Eval', dataset: 'v3', rows: 30,  avgF1: 84.1, status: 'success' },
+  { id: 'RUN-2840', date: daysAgo(2),  type: 'Eval', dataset: 'v3', rows: 30,  avgF1: 84.1, status: 'success' },
   { id: 'RUN-2839', date: daysAgo(5),  type: 'CMS',        dataset: '-',  rows: 211, avgF1: null, status: 'success' },
   { id: 'RUN-2837', date: daysAgo(7),  type: 'Eval',       dataset: 'v3', rows: 142, avgF1: 83.2, status: 'success' },
-  { id: 'RUN-2835', date: daysAgo(10), type: 'Quick Eval', dataset: 'v2', rows: 30,  avgF1: 82.8, status: 'success' },
+  { id: 'RUN-2835', date: daysAgo(10), type: 'Eval', dataset: 'v2', rows: 30,  avgF1: 82.8, status: 'success' },
   { id: 'RUN-2831', date: daysAgo(14), type: 'Eval',       dataset: 'v2', rows: 138, avgF1: 82.5, status: 'success' },
   { id: 'RUN-2829', date: daysAgo(17), type: 'CMS',        dataset: '-',  rows: 198, avgF1: null, status: 'error' },
   { id: 'RUN-2824', date: daysAgo(21), type: 'Eval',       dataset: 'v2', rows: 138, avgF1: 81.9, status: 'success' },
@@ -275,25 +286,25 @@ export const RUN_HISTORY_FULL = [
   { id: 'RUN-2841', date: daysAgo(0),  time: '14:30', type: 'Eval',       dataset: 'Grammar & Style — v3', rows: 142, avgF1: 83.8, avgLatency: '3.4s', tokens: '142K', status: 'success' },
   { id: 'RUN-2840', date: daysAgo(0),  time: '10:15', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 67,  avgF1: null, avgLatency: '3.1s', tokens: '89K',  status: 'success' },
   { id: 'RUN-2839', date: daysAgo(1),  time: '16:45', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 211, avgF1: null, avgLatency: '4.2s', tokens: '287K', status: 'success' },
-  { id: 'RUN-2838', date: daysAgo(1),  time: '09:00', type: 'Quick Eval', dataset: 'Grammar & Style — v3', rows: 30,  avgF1: 84.1, avgLatency: '3.3s', tokens: '28K',  status: 'success' },
+  { id: 'RUN-2838', date: daysAgo(1),  time: '09:00', type: 'Eval', dataset: 'Grammar & Style — v3', rows: 30,  avgF1: 84.1, avgLatency: '3.3s', tokens: '28K',  status: 'success' },
   { id: 'RUN-2837', date: daysAgo(2),  time: '15:20', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 94,  avgF1: null, avgLatency: '3.8s', tokens: '124K', status: 'success' },
   { id: 'RUN-2836', date: daysAgo(3),  time: '11:40', type: 'Eval',       dataset: 'Grammar & Style — v3', rows: 142, avgF1: 83.2, avgLatency: '3.5s', tokens: '140K', status: 'success' },
   { id: 'RUN-2835', date: daysAgo(4),  time: '14:10', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 178, avgF1: null, avgLatency: '3.6s', tokens: '231K', status: 'success' },
-  { id: 'RUN-2834', date: daysAgo(5),  time: '09:30', type: 'Quick Eval', dataset: 'Grammar & Style — v2', rows: 30,  avgF1: 82.8, avgLatency: '3.4s', tokens: '27K',  status: 'success' },
+  { id: 'RUN-2834', date: daysAgo(5),  time: '09:30', type: 'Eval', dataset: 'Grammar & Style — v2', rows: 30,  avgF1: 82.8, avgLatency: '3.4s', tokens: '27K',  status: 'success' },
   { id: 'RUN-2833', date: daysAgo(6),  time: '16:00', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 56,  avgF1: null, avgLatency: '5.1s', tokens: '71K',  status: 'error' },
   { id: 'RUN-2832', date: daysAgo(7),  time: '13:25', type: 'Eval',       dataset: 'Grammar & Style — v2', rows: 138, avgF1: 82.5, avgLatency: '3.7s', tokens: '136K', status: 'success' },
   { id: 'RUN-2831', date: daysAgo(8),  time: '10:50', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 143, avgF1: null, avgLatency: '3.2s', tokens: '189K', status: 'success' },
-  { id: 'RUN-2830', date: daysAgo(9),  time: '15:30', type: 'Quick Eval', dataset: 'Grammar & Style — v2', rows: 30,  avgF1: 82.1, avgLatency: '3.6s', tokens: '28K',  status: 'success' },
+  { id: 'RUN-2830', date: daysAgo(9),  time: '15:30', type: 'Eval', dataset: 'Grammar & Style — v2', rows: 30,  avgF1: 82.1, avgLatency: '3.6s', tokens: '28K',  status: 'success' },
   { id: 'RUN-2829', date: daysAgo(10), time: '11:15', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 198, avgF1: null, avgLatency: '6.8s', tokens: '264K', status: 'error' },
   { id: 'RUN-2828', date: daysAgo(11), time: '09:45', type: 'Eval',       dataset: 'Grammar & Style — v2', rows: 138, avgF1: 81.9, avgLatency: '3.4s', tokens: '138K', status: 'success' },
   { id: 'RUN-2827', date: daysAgo(12), time: '14:00', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 88,  avgF1: null, avgLatency: '3.3s', tokens: '114K', status: 'success' },
   { id: 'RUN-2826', date: daysAgo(14), time: '16:20', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 234, avgF1: null, avgLatency: '3.5s', tokens: '312K', status: 'success' },
-  { id: 'RUN-2825', date: daysAgo(15), time: '10:00', type: 'Quick Eval', dataset: 'Grammar & Style — v2', rows: 30,  avgF1: 81.4, avgLatency: '3.7s', tokens: '27K',  status: 'success' },
+  { id: 'RUN-2825', date: daysAgo(15), time: '10:00', type: 'Eval', dataset: 'Grammar & Style — v2', rows: 30,  avgF1: 81.4, avgLatency: '3.7s', tokens: '27K',  status: 'success' },
   { id: 'RUN-2824', date: daysAgo(17), time: '13:40', type: 'Eval',       dataset: 'Grammar & Style — v2', rows: 138, avgF1: 80.8, avgLatency: '3.6s', tokens: '135K', status: 'success' },
   { id: 'RUN-2823', date: daysAgo(19), time: '11:00', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 167, avgF1: null, avgLatency: '3.4s', tokens: '218K', status: 'success' },
   { id: 'RUN-2822', date: daysAgo(21), time: '15:10', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 143, avgF1: null, avgLatency: '3.9s', tokens: '186K', status: 'success' },
   { id: 'RUN-2821', date: daysAgo(23), time: '09:20', type: 'Eval',       dataset: 'Grammar & Style — v1', rows: 130, avgF1: 79.3, avgLatency: '3.8s', tokens: '128K', status: 'success' },
-  { id: 'RUN-2820', date: daysAgo(25), time: '14:50', type: 'Quick Eval', dataset: 'Grammar & Style — v1', rows: 30,  avgF1: 79.1, avgLatency: '3.5s', tokens: '26K',  status: 'success' },
+  { id: 'RUN-2820', date: daysAgo(25), time: '14:50', type: 'Eval', dataset: 'Grammar & Style — v1', rows: 30,  avgF1: 79.1, avgLatency: '3.5s', tokens: '26K',  status: 'success' },
   { id: 'RUN-2819', date: daysAgo(28), time: '10:30', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 189, avgF1: null, avgLatency: '3.7s', tokens: '245K', status: 'success' },
   { id: 'RUN-2818', date: daysAgo(32), time: '13:00', type: 'Eval',       dataset: 'Grammar & Style — v1', rows: 130, avgF1: 78.4, avgLatency: '4.1s', tokens: '127K', status: 'success' },
   { id: 'RUN-2817', date: daysAgo(35), time: '11:45', type: 'CMS Live',   dataset: 'Live CMS Feed',         rows: 112, avgF1: null, avgLatency: '3.3s', tokens: '147K', status: 'success' },
