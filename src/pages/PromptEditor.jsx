@@ -32,19 +32,25 @@ function generateDiff(oldText, newText) {
 export default function PromptEditor() {
   const { selected } = useAssistant()
   const nodes = getNodes(selected?.name || 'Grammar & Style')
+
   const [selectedNode, setSelectedNode] = useState(nodes[1])
   const [selectedVersion, setSelectedVersion] = useState(7)
   const [showDiff, setShowDiff] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [promptText, setPromptText] = useState(PROMPT_CONTENTS[7] || '')
+  // Per-node saved edits — keyed by assistant+nodeId so switching assistants resets cleanly
+  const [promptMap, setPromptMap] = useState({})
   const [toast, setToast] = useState({ show: false, message: '' })
 
-  const currentNodePrompts = PROMPT_CONTENTS
-  const displayPrompt = currentNodePrompts[selectedVersion] || selectedNode?.prompt || ''
+  // When selected assistant changes, reset to first non-orchestrator node
+  const prevAssistant = useState(selected?.name)[0]
+  const nodeKey = `${selected?.name}::${selectedNode?.id}`
+  const basePrompt = selectedNode?.prompt || ''
+  const promptText = promptMap[nodeKey] ?? basePrompt
+
+  const setPromptText = text => setPromptMap(prev => ({ ...prev, [nodeKey]: text }))
 
   const handleSelectNode = node => {
     setSelectedNode(node)
-    setPromptText(PROMPT_CONTENTS[7] || node.prompt || '')
     setSelectedVersion(7)
     setShowDiff(false)
   }
@@ -54,10 +60,22 @@ export default function PromptEditor() {
     setShowDiff(false)
   }
 
-  const diffLines = showDiff ? generateDiff(PROMPT_CONTENTS[6] || '', selectedVersion === 7 ? promptText : (PROMPT_CONTENTS[selectedVersion] || '')) : []
+  // For diff: compare current edits vs the node's original prompt (simulates v6 → v7)
+  const prevVersionText = basePrompt.split('\n').slice(0, -2).join('\n')
+  const diffLines = showDiff
+    ? generateDiff(prevVersionText, selectedVersion === 7 ? promptText : basePrompt)
+    : []
+
+  const displayedText = selectedVersion === 7 ? promptText : basePrompt
 
   const handleSave = () => {
-    setToast({ show: true, message: 'Saved as v8 (staging)' })
+    setPromptMap(prev => ({ ...prev, [nodeKey]: promptText }))
+    setToast({ show: true, message: 'Saved as v8 — staging only, resets on refresh' })
+  }
+
+  const handleDiscard = () => {
+    setPromptMap(prev => { const n = { ...prev }; delete n[nodeKey]; return n })
+    setToast({ show: true, message: 'Changes discarded' })
   }
 
   const handleCopy = () => {
@@ -149,7 +167,7 @@ export default function PromptEditor() {
             ) : (
               <div style={{ position: 'relative' }}>
                 <textarea
-                  value={selectedVersion === 7 ? promptText : (PROMPT_CONTENTS[selectedVersion] || '')}
+                  value={displayedText}
                   onChange={e => selectedVersion === 7 ? setPromptText(e.target.value) : null}
                   readOnly={selectedVersion !== 7}
                   style={{
@@ -171,7 +189,7 @@ export default function PromptEditor() {
             <button className="btn-primary" onClick={handleSave}>
               <Save size={14} /> Save as new version
             </button>
-            <button className="btn-secondary" onClick={() => { setPromptText(PROMPT_CONTENTS[7] || ''); setToast({ show: true, message: 'Changes discarded' }) }}>
+            <button className="btn-secondary" onClick={handleDiscard}>
               <Trash2 size={14} /> Discard changes
             </button>
             <button className="btn-secondary" onClick={handleCopy} style={{ marginLeft: 'auto' }}>
