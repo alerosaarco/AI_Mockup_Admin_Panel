@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter as BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AssistantProvider } from './context/AssistantContext'
 import Layout from './components/layout/Layout'
 import Overview from './pages/Overview'
